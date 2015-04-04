@@ -23,22 +23,22 @@ module Dragonfly
       @region           = options[:region] || REGIONS.keys.first
       @url_scheme       = options[:url_scheme] || 'http'
       @url_host         = options[:url_host]
+      @root_path        = options[:url_host]
+      @storage_headers  = options[:storage_headers] || {}
     end
 
-    attr_accessor :directory, :url, :user, :key, :durability_level, :region, :url_scheme, :url_host
+    attr_accessor :directory, :url, :user, :key, :durability_level, :region, :url_scheme, :url_host, :root_path, :storage_headers
 
     def write(content, options = {})
       ensure_configured
       ensure_directory
-      store_content(content)
+      store_content(content, options)
     end
 
     def read(uid)
       ensure_configured
       storage.get_object(full_path(uid))
-    rescue => e
-      # FIXME
-      puts "error reading file #{e.inspect}"
+    rescue RubyManta::MantaClient::ResourceNotFound => e
       nil
     end
 
@@ -50,30 +50,13 @@ module Dragonfly
 
     def url_for(uid, options = {})
       if options[:expires]
-        storage.gen_signed_url(options[:expires], full_path(uid), :get)
+        storage.gen_signed_url(options[:expires], :get, full_path(uid))
       else
         scheme = options[:scheme] || url_scheme
         host   = options[:host]   || url_host || region_host
 
         "#{scheme}://#{host}#{full_path(uid)}"
       end
-    end
-
-    def store_content(content)
-      uid = generate_uid(content.name || 'file')
-
-      content.file do |file|
-        binding.pry
-        storage.put_object(
-          full_path(uid),
-          file.read,
-          metadata({
-            :content_type => content.mime_type
-          })
-        )
-      end
-
-      uid
     end
 
     def storage
@@ -89,7 +72,32 @@ module Dragonfly
       false
     end
 
+    def domain
+      REGIONS[get_region]
+    end
+
     private
+
+    def store_content(content, options = {})
+      uid = options[:path] || generate_uid(content.name || 'file')
+
+      meta = {
+        :content_type => content.mime_type
+      }
+
+      meta.merge!(content.meta)      if content.meta
+      meta.merge!(options[:headers]) if options[:headers]
+
+      content.file do |file|
+        storage.put_object(
+          full_path(uid),
+          file.read,
+          full_storage_headers(meta)
+        )
+      end
+
+      uid
+    end
 
     def ensure_configured
       unless @configured
@@ -128,12 +136,12 @@ module Dragonfly
       "#{Time.now.strftime '%Y_%m_%d_%H_%M_%S'}_#{rand(1000)}_#{name.gsub(/[^\w.]+/, '_')}"
     end
 
-    def metadata(options = {})
-      { :durability_level => durability_level }.merge options
+    def full_storage_headers(options = {})
+      { :durability_level => durability_level }.merge(storage_headers).merge(options)
     end
 
     def full_path(uid)
-      File.join *[full_directory, uid].compact
+      File.join *[full_directory, root_path, uid].compact
     end
 
     def valid_regions
