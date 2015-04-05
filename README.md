@@ -21,8 +21,7 @@ Dragonfly.app.configure do
     directory: 'my_images',
     url: 'https://us-east.manta.joyent.com',
     user: 'myuser,
-    key_id: '00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00',
-    key: 'ssh key...',
+    key: 'actual ASCII ssh key (load from file or ENV)',
     durability_level: 2
   # ...
 end
@@ -31,6 +30,16 @@ end
 ### Available configuration options
 
 ```ruby
+:directory         # base directory within your public directory
+:url               # defaults to "https://us-east.manta.joyent.com"
+:user              # your joyent user
+:key               # SSH ASCII key
+:durability_level  # defaults to 2
+:region            # defaults to 'us-east'
+:url_scheme        # defaults to 'http'
+:url_host          # maybe useful for a CDN?
+:root_path         # another base directory on top of :directory (mostly to match the S3 store)
+:storage_headers   # headers to include for all stored objects
 ```
 
 ### Serving directly from Manta
