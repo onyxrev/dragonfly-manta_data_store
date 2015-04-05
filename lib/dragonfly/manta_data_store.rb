@@ -23,7 +23,7 @@ module Dragonfly
       @region           = options[:region] || REGIONS.keys.first
       @url_scheme       = options[:url_scheme] || 'http'
       @url_host         = options[:url_host]
-      @root_path        = options[:url_host]
+      @root_path        = options[:root_path]
       @storage_headers  = options[:storage_headers] || {}
     end
 
