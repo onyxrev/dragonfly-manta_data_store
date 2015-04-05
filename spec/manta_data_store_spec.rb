@@ -3,7 +3,6 @@ require 'ruby_manta_stub'
 require 'dragonfly/spec/data_store_examples'
 require 'yaml'
 require 'dragonfly/manta_data_store'
-require 'pry'
 
 describe Dragonfly::MantaDataStore do
   # To run these tests, put a file ".manta_spec.yml" in the dragonfly root dir, like this:
@@ -12,7 +11,6 @@ describe Dragonfly::MantaDataStore do
   #
   # and load your SSH key as the 'DRAGONFLY_MANTA_STORE_SSH_KEY' ENV variable
   if File.exist?(file = File.expand_path('../../.manta_spec.yml', __FILE__))
-    binding.pry
     config = YAML.load_file(file)
     KEY = ENV['DRAGONFLY_MANTA_STORE_SSH_KEY']
     enabled = config['enabled']
@@ -183,7 +181,7 @@ describe Dragonfly::MantaDataStore do
 
       it "gives an expiring url" do
         expires = 1301476942
-        @data_store.url_for(@uid, :expires => expires).should =~ /\/some\/path\/.*_something\.png\?algorithm=rsa-sha1&expires=#{expires}&keyId=\/#{@data_store.user}\/keys\//
+        @data_store.url_for(@uid, :expires => expires).should =~ /\/some\/path\/.*_something\.png\?algorithm=rsa-sha1&expires=#{expires}&keyId=%2F#{@data_store.user}%2Fkeys%2F/
       end
     end
 
@@ -253,7 +251,7 @@ describe Dragonfly::MantaDataStore do
       expires = 1301476942
 
       @data_store.url_for(@uid, :expires => expires).should =~
-      %r{^https://#{@data_store.domain}/#{@data_store.user}/public/#{DIRECTORY}/some/path/on/manta\?algorithm=rsa-sha1&expires=#{expires}&keyId=/#{@data_store.user}/keys\.*}
+      %r{^http://#{@data_store.domain}/#{@data_store.user}/public/#{DIRECTORY}/some/path/on/manta\?algorithm=rsa-sha1&expires=#{expires}&keyId=%2F#{@data_store.user}%2Fkeys\.*}
     end
 
     it "should allow for using https" do

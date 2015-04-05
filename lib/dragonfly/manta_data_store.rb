@@ -37,7 +37,9 @@ module Dragonfly
 
     def read(uid)
       ensure_configured
-      storage.get_object(full_path(uid))
+      response, headers = storage.get_object(full_path(uid))
+
+      [ response, headers_to_meta(headers) ]
     rescue RubyManta::MantaClient::ResourceNotFound => e
       nil
     end
@@ -49,14 +51,17 @@ module Dragonfly
     end
 
     def url_for(uid, options = {})
-      if options[:expires]
-        storage.gen_signed_url(options[:expires], :get, full_path(uid))
-      else
-        scheme = options[:scheme] || url_scheme
-        host   = options[:host]   || url_host || region_host
+      scheme = options[:scheme] || url_scheme
 
-        "#{scheme}://#{host}#{full_path(uid)}"
+      if options[:expires]
+        url_without_scheme = storage.gen_signed_url(options[:expires], :get, full_path(uid))
+      else
+        host = options[:host] || url_host || region_host
+
+        url_without_scheme = "#{host}#{full_path(uid)}"
       end
+
+      "#{scheme}://#{url_without_scheme}"
     end
 
     def storage
@@ -66,7 +71,7 @@ module Dragonfly
     end
 
     def directory_exists?
-      storage.list_directory(full_directory, :head => true)
+      storage.list_directory(public_directory, :head => true)
       true
     rescue RubyManta::MantaClient::UnknownError => e
       false
@@ -78,21 +83,36 @@ module Dragonfly
 
     private
 
+    def headers_to_meta(headers)
+      begin
+        JSON.parse(headers["m-dragonfly"])
+      rescue => e
+        nil
+      end
+    end
+
+    def meta_to_header(meta = {})
+      { :m_dragonfly => JSON.dump(meta) }
+    end
+
     def store_content(content, options = {})
       uid = options[:path] || generate_uid(content.name || 'file')
 
-      meta = {
+      headers = {
         :content_type => content.mime_type
       }
 
-      meta.merge!(content.meta)      if content.meta
-      meta.merge!(options[:headers]) if options[:headers]
+      headers.merge!(meta_to_header(content.meta))
+      headers.merge!(options[:headers]) if options[:headers]
+
+      path = full_path(uid)
+      mkdir_for_file_path(path)
 
       content.file do |file|
         storage.put_object(
-          full_path(uid),
+          path,
           file.read,
-          full_storage_headers(meta)
+          full_storage_headers(headers)
         )
       end
 
@@ -111,13 +131,13 @@ module Dragonfly
 
     def ensure_directory
       unless @directory_created
-        storage.put_directory(full_directory) unless directory_exists?
+        mkdir(public_directory) unless directory_exists?
 
         @directory_created = true
       end
     end
 
-    def full_directory
+    def public_directory
       "/#{@user}/public/#{@directory}"
     end
 
@@ -137,15 +157,37 @@ module Dragonfly
     end
 
     def full_storage_headers(options = {})
-      { :durability_level => durability_level }.merge(storage_headers).merge(options)
+      {
+        "durability_level" => durability_level
+      }.merge(storage_headers).merge(options)
     end
 
     def full_path(uid)
-      File.join *[full_directory, root_path, uid].compact
+      File.join *[public_directory, root_path, uid].compact
     end
 
     def valid_regions
       REGIONS.keys
+    end
+
+    def mkdir_for_file_path(file_with_path)
+      mkdir_with_intermediates file_with_path.split("/")[0..-2].join("/")
+    end
+
+    def mkdir_with_intermediates(path)
+      path_components = path.split("/")
+
+      path_components.length.times do |index|
+        path_to_make = path_components[0..index].join("/")
+
+        if path_to_make.start_with?(public_directory) and not path_to_make.empty?
+          mkdir path_to_make
+        end
+      end
+    end
+
+    def mkdir(path)
+      storage.put_directory(path)
     end
   end
 end

@@ -1,4 +1,4 @@
-require 'uri'
+require 'cgi'
 
 # just close enough to make the tests pass...
 class RubyMantaStub
@@ -19,9 +19,9 @@ class RubyMantaStub
     @directories[directory]
   end
 
-  def put_object(path, content, meta)
+  def put_object(path, content, headers)
     @store[path] = {
-      :meta    => meta,
+      :headers => headers,
       :content => content
     }
 
@@ -29,9 +29,12 @@ class RubyMantaStub
   end
 
   def get_object(path)
-    return nil unless @store[path]
+    raise RubyManta::MantaClient::ResourceNotFound unless @store[path]
 
-    [ @store[path][:content], @store[path][:meta] ]
+    headers = @store[path][:headers].dup
+    headers["m-dragonfly"] = headers.delete :m_dragonfly
+
+    [ @store[path][:content], headers ]
   end
 
   def delete_object(path)
@@ -43,6 +46,8 @@ class RubyMantaStub
   def gen_signed_url(expiry, method, path)
     fake_key = rand(36**128).to_s(36)
 
-    "https://#{domain}#{path}?algorithm=rsa-sha1&expires=#{expiry}&keyId=/#{user}/keys/#{fake_key}"
+    key_id = CGI.escape("/#{user}/keys/#{fake_key}")
+
+    "#{domain}#{path}?algorithm=rsa-sha1&expires=#{expiry}&keyId=#{key_id}"
   end
 end
