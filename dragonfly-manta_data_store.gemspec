@@ -10,7 +10,7 @@ Gem::Specification.new do |spec|
   spec.email         = ["danconn@danconnor.com"]
   spec.description   = %q{Manta data store for Dragonfly}
   spec.summary       = %q{Data store for storing Dragonfly content (e.g. images) on Manta}
-  spec.homepage      = "https://github.com/markevans/dragonfly-manta_data_store"
+  spec.homepage      = "https://github.com/onyxrev/dragonfly-manta_data_store"
   spec.license       = "MIT"
 
   spec.files         = `git ls-files`.split($/)
