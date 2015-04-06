@@ -85,14 +85,14 @@ module Dragonfly
 
     def headers_to_meta(headers)
       begin
-        JSON.parse(headers["m-dragonfly"])
+        Serializer.json_decode(headers["m-dragonfly"])
       rescue => e
         nil
       end
     end
 
     def meta_to_header(meta = {})
-      { :m_dragonfly => JSON.dump(meta) }
+      { :m_dragonfly => Serializer.json_encode(meta) }
     end
 
     def store_content(content, options = {})
