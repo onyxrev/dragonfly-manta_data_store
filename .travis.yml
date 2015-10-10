@@ -6,3 +6,4 @@ rvm:
   - rbx-2
   - ruby-head
   - jruby-head
+script: bundle exec rspec
