@@ -1,5 +1,7 @@
 # Dragonfly::MantaDataStore
 
+[![Build Status](https://travis-ci.org/onyxrev/dragonfly-manta_data_store.svg?branch=master)](https://travis-ci.org/onyxrev/dragonfly-manta_data_store)
+
 Joyent Manta data store for use with the [Dragonfly](http://github.com/markevans/dragonfly) gem. Inspired by the [S3 Dragonfly gem](https://github.com/markevans/dragonfly-s3_data_store).
 
 ## Gemfile
